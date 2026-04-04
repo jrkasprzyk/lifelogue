@@ -1,0 +1,214 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  max-width: 700px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+.header {
+  margin-bottom: 2.5rem;
+}
+
+.back {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  padding: 0;
+  margin-bottom: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.back:hover {
+  border: none;
+  background: none;
+  color: var(--accent);
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Template selection */
+.templateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.templateCard {
+  background: var(--bg-card);
+  padding: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: background var(--transition);
+}
+
+.templateCard:hover {
+  background: var(--bg-raised);
+}
+
+.templateEmoji {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.templateName {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.templateDesc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Configure form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.emojiGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.emojiBtn, .emojiActive {
+  font-size: 1.25rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.emojiActive {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.emojiBtn:hover {
+  border-color: var(--border-light);
+  color: var(--text);
+  background: var(--bg-raised);
+}
+
+.fieldsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fieldsHint {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-top: -0.75rem;
+}
+
+.emptyFields {
+  padding: 1.5rem;
+  border: 1px dashed var(--border);
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.fieldRow {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 0.75rem;
+}
+
+.fieldRowControls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.moveButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.moveBtn {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.65rem;
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
+.moveBtn:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+.moveBtn:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-dim);
+  background: transparent;
+}
+
+.fieldInputs {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.fieldInputs input {
+  flex: 1;
+}
+
+.fieldInputs select {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.error {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--red);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(201, 76, 76, 0.3);
+  background: rgba(201, 76, 76, 0.08);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
