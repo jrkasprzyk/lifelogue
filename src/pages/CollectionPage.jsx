@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { getFieldValue } from '../lib/collectionFields'
+import { buildMigratedData, getFieldValue } from '../lib/collectionFields'
 import Nav from '../components/Nav'
 import styles from './CollectionPage.module.css'
 
@@ -32,8 +32,33 @@ export default function CollectionPage({ session }) {
       supabase.from('collections').select('*').eq('id', id).single(),
       supabase.from('entries').select('*').eq('collection_id', id).order('created_at', { ascending: false })
     ])
-    if (colResult.data) setCollection(colResult.data)
-    if (entriesResult.data) setEntries(entriesResult.data)
+
+    const collectionData = colResult.data
+    const entriesData = entriesResult.data || []
+
+    if (collectionData) {
+      setCollection(collectionData)
+    }
+
+    if (collectionData && entriesData.length > 0) {
+      const fields = collectionData.fields || []
+      const updatedEntries = [...entriesData]
+
+      for (let i = 0; i < updatedEntries.length; i += 1) {
+        const entry = updatedEntries[i]
+        const { data: migratedData, changed } = buildMigratedData(entry.data, fields)
+        if (!changed) continue
+
+        updatedEntries[i] = { ...entry, data: migratedData }
+        // Best-effort backfill so old renamed keys keep working permanently.
+        await supabase.from('entries').update({ data: migratedData }).eq('id', entry.id)
+      }
+
+      setEntries(updatedEntries)
+    } else {
+      setEntries(entriesData)
+    }
+
     setLoading(false)
   }
 

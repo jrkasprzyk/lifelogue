@@ -69,3 +69,22 @@ export function getFieldValue(data, field) {
 
   return undefined
 }
+
+export function buildMigratedData(data, fields) {
+  const row = data && typeof data === 'object' ? { ...data } : {}
+  let changed = false
+
+  for (const field of fields || []) {
+    const stableKey = String(field?.key || '').trim()
+    if (!stableKey) continue
+    if (hasOwn(row, stableKey)) continue
+
+    const value = getFieldValue(row, field)
+    if (value !== undefined) {
+      row[stableKey] = value
+      changed = true
+    }
+  }
+
+  return { data: row, changed }
+}
