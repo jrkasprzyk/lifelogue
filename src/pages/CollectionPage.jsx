@@ -300,6 +300,15 @@ export default function CollectionPage({ session }) {
                       <div className={styles.entryActions}>
                         <span className={styles.toggle}>{isExpanded ? '↑' : '↓'}</span>
                         <button
+                          className={styles.editBtn}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(`/collections/${id}/entries/${entry.id}/edit`)
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
                           className={`${styles.deleteBtn} danger`}
                           onClick={(e) => deleteEntry(entry.id, e)}
                         >

@@ -275,7 +275,21 @@
   transition: opacity var(--transition), border-color var(--transition), color var(--transition);
 }
 
-.entry:hover .deleteBtn {
+.editBtn {
+  opacity: 0;
+  font-size: 0.66rem;
+  padding: 0.2rem 0.45rem;
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
+.editBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.entry:hover .deleteBtn,
+.entry:hover .editBtn {
   opacity: 1;
 }
 
