@@ -262,6 +262,73 @@ create policy "Leave or owner removes membership"
 
 After this migration, owners can share links from the collection page and other users can join through that link.
 
+### Fix: "infinite recursion detected in policy for relation collections"
+
+If you see that error, apply this hotfix. It replaces membership policies that directly query `collections`
+with `SECURITY DEFINER` helpers, which avoids policy recursion.
+
+```sql
+-- Helper function: check owner without triggering RLS recursion.
+create or replace function public.is_collection_owner(p_collection_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.collections c
+    where c.id = p_collection_id
+      and c.user_id = auth.uid()
+  );
+$$;
+
+-- Helper function: validate invite code without recursive policy checks.
+create or replace function public.is_valid_collection_invite(p_collection_id uuid, p_invite_code text)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.collections c
+    where c.id = p_collection_id
+      and c.share_code = p_invite_code
+  );
+$$;
+
+grant execute on function public.is_collection_owner(uuid) to authenticated;
+grant execute on function public.is_valid_collection_invite(uuid, text) to authenticated;
+
+drop policy if exists "Read memberships for involved users" on collection_memberships;
+drop policy if exists "Join by invite code" on collection_memberships;
+drop policy if exists "Leave or owner removes membership" on collection_memberships;
+
+create policy "Read memberships for involved users"
+  on collection_memberships for select
+  using (
+    auth.uid() = user_id
+    or public.is_collection_owner(collection_id)
+  );
+
+create policy "Join by invite code"
+  on collection_memberships for insert
+  with check (
+    auth.uid() = user_id
+    and public.is_valid_collection_invite(collection_id, invite_code)
+  );
+
+create policy "Leave or owner removes membership"
+  on collection_memberships for delete
+  using (
+    auth.uid() = user_id
+    or public.is_collection_owner(collection_id)
+  );
+
+select pg_notify('pgrst', 'reload schema');
+```
+
 ---
 
 ## Deploy to Vercel (optional)

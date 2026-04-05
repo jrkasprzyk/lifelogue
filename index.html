@@ -9,6 +9,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <script>
+      (function restoreRedirectedRoute() {
+        var params = new URLSearchParams(window.location.search)
+        var redirectedPath = params.get('p')
+
+        if (!redirectedPath) return
+
+        var redirectedQuery = params.get('q')
+        var redirectedHash = params.get('h')
+        var nextUrl = redirectedPath
+
+        if (redirectedQuery) nextUrl += '?' + redirectedQuery
+        if (redirectedHash) nextUrl += '#' + redirectedHash
+
+        window.history.replaceState(null, '', nextUrl)
+      })()
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

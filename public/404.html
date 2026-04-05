@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lifelogue</title>
+  </head>
+  <body>
+    <script>
+      (function redirectToAppEntry() {
+        var pathname = window.location.pathname
+        var segments = pathname.split('/').filter(Boolean)
+        var joinIndex = segments.indexOf('join')
+        var baseSegments = joinIndex === -1 ? [] : segments.slice(0, joinIndex)
+        var basePath = '/' + (baseSegments.length ? baseSegments.join('/') + '/' : '')
+        var params = new URLSearchParams()
+
+        params.set('p', pathname)
+
+        if (window.location.search.length > 1) {
+          params.set('q', window.location.search.slice(1))
+        }
+
+        if (window.location.hash.length > 1) {
+          params.set('h', window.location.hash.slice(1))
+        }
+
+        window.location.replace(basePath + '?' + params.toString())
+      })()
+    </script>
+  </body>
+</html>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { buildAppUrl } from '../lib/appRoutes'
 import { buildMigratedData, getFieldMatch, getFieldValue } from '../lib/collectionFields'
 import Nav from '../components/Nav'
 import styles from './CollectionPage.module.css'
@@ -212,7 +213,7 @@ export default function CollectionPage({ session }) {
     const code = await ensureShareCode()
     if (!code) return
 
-    const link = `${window.location.origin}/join/${collection.id}/${code}`
+    const link = buildAppUrl(`/join/${collection.id}/${code}`)
     try {
       await navigator.clipboard.writeText(link)
       setShareMessage('Invite link copied.')
@@ -271,7 +272,7 @@ export default function CollectionPage({ session }) {
   const starField = (collection.fields || []).find(f => f.type === 'stars')
   const isOwner = collection.user_id === session.user.id
   const shareLink = collection.share_code
-    ? `${window.location.origin}/join/${collection.id}/${collection.share_code}`
+    ? buildAppUrl(`/join/${collection.id}/${collection.share_code}`)
     : ''
 
   return (
