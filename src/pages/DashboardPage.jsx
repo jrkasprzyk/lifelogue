@@ -8,18 +8,40 @@ export default function DashboardPage({ session }) {
   const navigate = useNavigate()
   const [collections, setCollections] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     fetchCollections()
   }, [])
 
   const fetchCollections = async () => {
-    const { data, error } = await supabase
+    setError(null)
+
+    const { data, error: withCountError } = await supabase
       .from('collections')
       .select('*, entries(count)')
       .order('created_at', { ascending: false })
 
-    if (!error) setCollections(data || [])
+    if (!withCountError) {
+      setCollections(data || [])
+      setLoading(false)
+      return
+    }
+
+    // Fallback: if count join fails under RLS/policy churn, still show collections.
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('collections')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (!fallbackError) {
+      setCollections(fallbackData || [])
+      setLoading(false)
+      return
+    }
+
+    setError(fallbackError.message || withCountError.message)
+    setCollections([])
     setLoading(false)
   }
 
@@ -46,6 +68,12 @@ export default function DashboardPage({ session }) {
 
         {loading ? (
           <p className={styles.empty}>Loading...</p>
+        ) : error ? (
+          <div className={styles.emptyState}>
+            <p className={styles.emptyTitle}>Could not load collections.</p>
+            <p className={styles.emptyDesc}>{error}</p>
+            <button onClick={fetchCollections}>Retry</button>
+          </div>
         ) : collections.length === 0 ? (
           <div className={styles.emptyState}>
             <p className={styles.emptyTitle}>The pages are blank.</p>
