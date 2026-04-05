@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage'
 import CollectionPage from './pages/CollectionPage'
 import NewCollectionPage from './pages/NewCollectionPage'
 import NewEntryPage from './pages/NewEntryPage'
+import EditCollectionPage from './pages/EditCollectionPage'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -57,6 +58,10 @@ export default function App() {
       <Route
         path="/collections/:id/entries/new"
         element={session ? <NewEntryPage session={session} /> : <Navigate to="/auth" replace />}
+      />
+      <Route
+        path="/collections/:id/edit"
+        element={session ? <EditCollectionPage session={session} /> : <Navigate to="/auth" replace />}
       />
     </Routes>
   )

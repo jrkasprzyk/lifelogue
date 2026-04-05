@@ -76,9 +76,14 @@ export default function CollectionPage({ session }) {
               <p className={styles.desc}>{collection.description}</p>
             )}
           </div>
-          <button className="primary" onClick={() => navigate(`/collections/${id}/entries/new`)}>
-            + New Entry
-          </button>
+          <div className={styles.headerActions}>
+            <button onClick={() => navigate(`/collections/${id}/edit`)}>
+              Edit Schema
+            </button>
+            <button className="primary" onClick={() => navigate(`/collections/${id}/entries/new`)}>
+              + New Entry
+            </button>
+          </div>
         </div>
 
         {entries.length === 0 ? (
