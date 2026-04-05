@@ -36,7 +36,7 @@ export default function AuthPage() {
       <div className={styles.container}>
         <div className={styles.header}>
           <div className={styles.rule} />
-          <h1 className={styles.title}>LOGBOOK</h1>
+          <h1 className={styles.title}>LIFELOGUE</h1>
           <p className={styles.subtitle}>A journal for things worth remembering.</p>
           <div className={styles.rule} />
         </div>

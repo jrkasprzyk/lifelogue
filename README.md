@@ -9,7 +9,7 @@ A personal journal for anything worth tracking — races, films, albums, books, 
 ### 1. Create a Supabase project
 
 - Go to [supabase.com](https://supabase.com) and sign in
-- Click **New Project**, give it a name (e.g. `logbook`), set a database password, pick a region close to you
+- Click **New Project**, give it a name (e.g. `lifelogue`), set a database password, pick a region close to you
 - Wait ~2 minutes for it to provision
 
 ---

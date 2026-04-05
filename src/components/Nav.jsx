@@ -13,7 +13,7 @@ export default function Nav({ session }) {
   return (
     <nav className={styles.nav}>
       <button className={styles.wordmark} onClick={() => navigate('/')}>
-        LOGBOOK
+        LIFELOGUE
       </button>
       <div className={styles.right}>
         <span className={styles.email}>{session?.user?.email}</span>
