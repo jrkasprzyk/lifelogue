@@ -8,6 +8,7 @@ import NewCollectionPage from './pages/NewCollectionPage'
 import NewEntryPage from './pages/NewEntryPage'
 import EditCollectionPage from './pages/EditCollectionPage'
 import EditEntryPage from './pages/EditEntryPage'
+import JoinCollectionPage from './pages/JoinCollectionPage'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -67,6 +68,10 @@ export default function App() {
       <Route
         path="/collections/:id/edit"
         element={session ? <EditCollectionPage session={session} /> : <Navigate to="/auth" replace />}
+      />
+      <Route
+        path="/join/:collectionId/:code"
+        element={session ? <JoinCollectionPage session={session} /> : <Navigate to="/auth" replace />}
       />
     </Routes>
   )

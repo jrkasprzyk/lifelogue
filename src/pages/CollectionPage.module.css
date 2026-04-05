@@ -80,6 +80,49 @@
   color: var(--text-muted);
 }
 
+.shareCard {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.shareHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.shareTitle {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+}
+
+.shareSubtitle {
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.shareActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.shareLink {
+  margin-top: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  border: 1px dashed var(--border);
+  padding: 0.55rem 0.65rem;
+}
+
 .mapperCard {
   border: 1px solid var(--border);
   background: var(--bg-card);
@@ -338,6 +381,15 @@
 
   .headerActions {
     width: 100%;
+  }
+
+  .shareHeader {
+    flex-direction: column;
+  }
+
+  .shareActions {
+    width: 100%;
+    flex-wrap: wrap;
   }
 
   .mapperRow {

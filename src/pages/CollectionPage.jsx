@@ -27,6 +27,8 @@ export default function CollectionPage({ session }) {
   const [promoting, setPromoting] = useState(false)
   const [mapperMessage, setMapperMessage] = useState(null)
   const [mapperError, setMapperError] = useState(null)
+  const [shareMessage, setShareMessage] = useState(null)
+  const [shareError, setShareError] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -170,6 +172,84 @@ export default function CollectionPage({ session }) {
     setPromoting(false)
   }
 
+  const generateInviteCode = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    let code = ''
+    for (let i = 0; i < 8; i += 1) {
+      code += chars[Math.floor(Math.random() * chars.length)]
+    }
+    return code
+  }
+
+  const ensureShareCode = async () => {
+    if (!collection) return null
+    if (collection.share_code) return collection.share_code
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const nextCode = generateInviteCode()
+      const { error: updateError } = await supabase
+        .from('collections')
+        .update({ share_code: nextCode })
+        .eq('id', collection.id)
+        .eq('user_id', session.user.id)
+
+      if (!updateError) {
+        setCollection(prev => ({ ...prev, share_code: nextCode }))
+        return nextCode
+      }
+
+      if (updateError.code !== '23505') {
+        setShareError(updateError.message)
+        return null
+      }
+    }
+
+    setShareError('Could not generate a unique invite code. Try again.')
+    return null
+  }
+
+  const copyInviteLink = async () => {
+    const code = await ensureShareCode()
+    if (!code) return
+
+    const link = `${window.location.origin}/join/${collection.id}/${code}`
+    try {
+      await navigator.clipboard.writeText(link)
+      setShareMessage('Invite link copied.')
+      setShareError(null)
+    } catch {
+      setShareError('Could not copy automatically. You can copy the link manually below.')
+    }
+  }
+
+  const rotateInviteCode = async () => {
+    if (!collection) return
+    setShareMessage(null)
+    setShareError(null)
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const nextCode = generateInviteCode()
+      const { error: updateError } = await supabase
+        .from('collections')
+        .update({ share_code: nextCode })
+        .eq('id', collection.id)
+        .eq('user_id', session.user.id)
+
+      if (!updateError) {
+        setCollection(prev => ({ ...prev, share_code: nextCode }))
+        setShareMessage('Invite code regenerated.')
+        return
+      }
+
+      if (updateError.code !== '23505') {
+        setShareError(updateError.message)
+        return
+      }
+    }
+
+    setShareError('Could not regenerate invite code right now.')
+  }
+
   if (loading) {
     return (
       <div className={styles.page}>
@@ -189,6 +269,10 @@ export default function CollectionPage({ session }) {
   }
 
   const starField = (collection.fields || []).find(f => f.type === 'stars')
+  const isOwner = collection.user_id === session.user.id
+  const shareLink = collection.share_code
+    ? `${window.location.origin}/join/${collection.id}/${collection.share_code}`
+    : ''
 
   return (
     <div className={styles.page}>
@@ -206,14 +290,35 @@ export default function CollectionPage({ session }) {
             )}
           </div>
           <div className={styles.headerActions}>
-            <button onClick={() => navigate(`/collections/${id}/edit`)}>
-              Edit Schema
-            </button>
+            {isOwner && (
+              <button onClick={() => navigate(`/collections/${id}/edit`)}>
+                Edit Schema
+              </button>
+            )}
             <button className="primary" onClick={() => navigate(`/collections/${id}/entries/new`)}>
               + New Entry
             </button>
           </div>
         </div>
+
+        {isOwner && (
+          <div className={styles.shareCard}>
+            <div className={styles.shareHeader}>
+              <div>
+                <p className={styles.shareTitle}>Share Collection</p>
+                <p className={styles.shareSubtitle}>Invite others with this link so they can access and edit entries.</p>
+              </div>
+              <div className={styles.shareActions}>
+                <button onClick={copyInviteLink}>Copy Invite Link</button>
+                <button onClick={rotateInviteCode}>Regenerate Code</button>
+              </div>
+            </div>
+
+            {shareLink && <p className={styles.shareLink}>{shareLink}</p>}
+            {shareError && <p className={styles.mapperError}>{shareError}</p>}
+            {shareMessage && <p className={styles.mapperMessage}>{shareMessage}</p>}
+          </div>
+        )}
 
         {legacyKeyStats.length > 0 && (
           <div className={styles.mapperCard}>

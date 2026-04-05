@@ -110,6 +110,16 @@
   transition: opacity var(--transition), border-color var(--transition), color var(--transition);
 }
 
+.sharedPill {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+  border: 1px solid var(--border);
+  padding: 0.15rem 0.4rem;
+}
+
 .card:hover .deleteBtn {
   opacity: 1;
 }

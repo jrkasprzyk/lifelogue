@@ -107,6 +107,163 @@ This means one flexible table handles every collection type instead of needing a
 
 ---
 
+## Enable Shared Collections (multi-user)
+
+If you want multiple users to access the same collection, run this migration in Supabase SQL Editor.
+
+```sql
+-- 1) Add invite code on collections (used for share links)
+alter table collections
+  add column if not exists share_code text unique;
+
+-- 2) Membership table: users who joined shared collections
+create table if not exists collection_memberships (
+  collection_id uuid references collections(id) on delete cascade not null,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  invite_code text not null,
+  created_at timestamptz not null default now(),
+  primary key (collection_id, user_id)
+);
+
+alter table collection_memberships enable row level security;
+
+-- 3) Replace old collection policy (owner-only) with shared read policy
+drop policy if exists "Users manage own collections" on collections;
+
+create policy "Owners create collections"
+  on collections for insert
+  with check (auth.uid() = user_id);
+
+create policy "Owners update collections"
+  on collections for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Owners delete collections"
+  on collections for delete
+  using (auth.uid() = user_id);
+
+create policy "Owners and members read collections"
+  on collections for select
+  using (
+    auth.uid() = user_id
+    or exists (
+      select 1
+      from collection_memberships m
+      where m.collection_id = collections.id
+        and m.user_id = auth.uid()
+    )
+  );
+
+-- 4) Replace old entry policy with shared-access policy
+drop policy if exists "Users manage own entries" on entries;
+
+create policy "Owners and members read entries"
+  on entries for select
+  using (
+    exists (
+      select 1
+      from collections c
+      left join collection_memberships m
+        on m.collection_id = c.id and m.user_id = auth.uid()
+      where c.id = entries.collection_id
+        and (c.user_id = auth.uid() or m.user_id is not null)
+    )
+  );
+
+create policy "Owners and members create entries"
+  on entries for insert
+  with check (
+    auth.uid() = user_id
+    and exists (
+      select 1
+      from collections c
+      left join collection_memberships m
+        on m.collection_id = c.id and m.user_id = auth.uid()
+      where c.id = entries.collection_id
+        and (c.user_id = auth.uid() or m.user_id is not null)
+    )
+  );
+
+create policy "Owners and members update entries"
+  on entries for update
+  using (
+    exists (
+      select 1
+      from collections c
+      left join collection_memberships m
+        on m.collection_id = c.id and m.user_id = auth.uid()
+      where c.id = entries.collection_id
+        and (c.user_id = auth.uid() or m.user_id is not null)
+    )
+  )
+  with check (
+    auth.uid() = user_id
+    and exists (
+      select 1
+      from collections c
+      left join collection_memberships m
+        on m.collection_id = c.id and m.user_id = auth.uid()
+      where c.id = entries.collection_id
+        and (c.user_id = auth.uid() or m.user_id is not null)
+    )
+  );
+
+create policy "Owners and members delete entries"
+  on entries for delete
+  using (
+    exists (
+      select 1
+      from collections c
+      left join collection_memberships m
+        on m.collection_id = c.id and m.user_id = auth.uid()
+      where c.id = entries.collection_id
+        and (c.user_id = auth.uid() or m.user_id is not null)
+    )
+  );
+
+-- 5) Membership policies
+create policy "Read memberships for involved users"
+  on collection_memberships for select
+  using (
+    auth.uid() = user_id
+    or exists (
+      select 1
+      from collections c
+      where c.id = collection_memberships.collection_id
+        and c.user_id = auth.uid()
+    )
+  );
+
+create policy "Join by invite code"
+  on collection_memberships for insert
+  with check (
+    auth.uid() = user_id
+    and exists (
+      select 1
+      from collections c
+      where c.id = collection_memberships.collection_id
+        and c.share_code = collection_memberships.invite_code
+    )
+  );
+
+create policy "Leave or owner removes membership"
+  on collection_memberships for delete
+  using (
+    auth.uid() = user_id
+    or exists (
+      select 1
+      from collections c
+      where c.id = collection_memberships.collection_id
+        and c.user_id = auth.uid()
+    )
+  );
+```
+
+After this migration, owners can share links from the collection page and other users can join through that link.
+
+---
+
 ## Deploy to Vercel (optional)
 
 ```bash

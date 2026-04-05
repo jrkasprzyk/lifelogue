@@ -56,37 +56,45 @@ export default function DashboardPage({ session }) {
           </div>
         ) : (
           <div className={styles.grid}>
-            {collections.map((col, i) => (
-              <div
-                key={col.id}
-                className={styles.card}
-                onClick={() => navigate(`/collections/${col.id}`)}
-                style={{ animationDelay: `${i * 60}ms` }}
-              >
-                <div className={styles.cardTop}>
-                  <span className={styles.emoji}>{col.emoji || '📓'}</span>
-                  <button
-                    className={`${styles.deleteBtn} danger`}
-                    onClick={(e) => deleteCollection(col.id, e)}
-                    title="Delete collection"
-                  >
-                    ×
-                  </button>
+            {collections.map((col, i) => {
+              const isOwner = col.user_id === session.user.id
+
+              return (
+                <div
+                  key={col.id}
+                  className={styles.card}
+                  onClick={() => navigate(`/collections/${col.id}`)}
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
+                  <div className={styles.cardTop}>
+                    <span className={styles.emoji}>{col.emoji || '📓'}</span>
+                    {isOwner ? (
+                      <button
+                        className={`${styles.deleteBtn} danger`}
+                        onClick={(e) => deleteCollection(col.id, e)}
+                        title="Delete collection"
+                      >
+                        ×
+                      </button>
+                    ) : (
+                      <span className={styles.sharedPill}>Shared</span>
+                    )}
+                  </div>
+                  <h2 className={styles.cardTitle}>{col.name}</h2>
+                  {col.description && (
+                    <p className={styles.cardDesc}>{col.description}</p>
+                  )}
+                  <div className={styles.cardMeta}>
+                    <span className={styles.count}>
+                      {col.entries?.[0]?.count ?? 0} entries
+                    </span>
+                    <span className={styles.date}>
+                      {new Date(col.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
-                <h2 className={styles.cardTitle}>{col.name}</h2>
-                {col.description && (
-                  <p className={styles.cardDesc}>{col.description}</p>
-                )}
-                <div className={styles.cardMeta}>
-                  <span className={styles.count}>
-                    {col.entries?.[0]?.count ?? 0} entries
-                  </span>
-                  <span className={styles.date}>
-                    {new Date(col.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                  </span>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </main>
