@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { buildMigratedData, getFieldValue } from '../lib/collectionFields'
+import { buildMigratedData, getFieldMatch, getFieldValue } from '../lib/collectionFields'
 import Nav from '../components/Nav'
 import styles from './CollectionPage.module.css'
 
@@ -22,6 +22,11 @@ export default function CollectionPage({ session }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
+  const [showMapper, setShowMapper] = useState(false)
+  const [mapping, setMapping] = useState({})
+  const [promoting, setPromoting] = useState(false)
+  const [mapperMessage, setMapperMessage] = useState(null)
+  const [mapperError, setMapperError] = useState(null)
 
   useEffect(() => {
     fetchData()
@@ -69,6 +74,102 @@ export default function CollectionPage({ session }) {
     setEntries(prev => prev.filter(e => e.id !== entryId))
   }
 
+  const legacyKeyStats = useMemo(() => {
+    if (!collection) return []
+
+    const counts = {}
+    const fields = collection.fields || []
+
+    for (const entry of entries) {
+      const data = entry.data && typeof entry.data === 'object' ? entry.data : {}
+      const matchedKeys = new Set()
+
+      for (const field of fields) {
+        const match = getFieldMatch(data, field)
+        if (match?.key) matchedKeys.add(match.key)
+      }
+
+      for (const key of Object.keys(data)) {
+        if (!matchedKeys.has(key)) {
+          counts[key] = (counts[key] || 0) + 1
+        }
+      }
+    }
+
+    return Object.entries(counts)
+      .map(([key, count]) => ({ key, count }))
+      .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
+  }, [collection, entries])
+
+  const handleMappingChange = (legacyKey, targetKey) => {
+    setMapping(prev => ({ ...prev, [legacyKey]: targetKey }))
+  }
+
+  const applyLegacyMappings = async () => {
+    if (!collection) return
+
+    const selectedMappings = Object.entries(mapping).filter(([, target]) => target)
+    if (selectedMappings.length === 0) {
+      setMapperError('Pick at least one mapping before applying.')
+      return
+    }
+
+    setPromoting(true)
+    setMapperError(null)
+    setMapperMessage(null)
+
+    const updatedEntries = [...entries]
+    let updatedCount = 0
+    let conflictCount = 0
+
+    for (let i = 0; i < updatedEntries.length; i += 1) {
+      const entry = updatedEntries[i]
+      const data = entry.data && typeof entry.data === 'object' ? { ...entry.data } : {}
+      let changed = false
+
+      for (const [legacyKey, targetKey] of selectedMappings) {
+        if (!Object.prototype.hasOwnProperty.call(data, legacyKey)) continue
+
+        const legacyValue = data[legacyKey]
+        const hasTarget = Object.prototype.hasOwnProperty.call(data, targetKey)
+
+        if (!hasTarget) {
+          data[targetKey] = legacyValue
+          delete data[legacyKey]
+          changed = true
+          continue
+        }
+
+        if (data[targetKey] === legacyValue) {
+          delete data[legacyKey]
+          changed = true
+        } else {
+          conflictCount += 1
+        }
+      }
+
+      if (!changed) continue
+
+      const { error: updateError } = await supabase
+        .from('entries')
+        .update({ data })
+        .eq('id', entry.id)
+
+      if (updateError) {
+        setMapperError(updateError.message)
+        setPromoting(false)
+        return
+      }
+
+      updatedEntries[i] = { ...entry, data }
+      updatedCount += 1
+    }
+
+    setEntries(updatedEntries)
+    setMapperMessage(`Updated ${updatedCount} entr${updatedCount === 1 ? 'y' : 'ies'}${conflictCount ? `, skipped ${conflictCount} conflict${conflictCount === 1 ? '' : 's'}` : ''}.`)
+    setPromoting(false)
+  }
+
   if (loading) {
     return (
       <div className={styles.page}>
@@ -113,6 +214,54 @@ export default function CollectionPage({ session }) {
             </button>
           </div>
         </div>
+
+        {legacyKeyStats.length > 0 && (
+          <div className={styles.mapperCard}>
+            <div className={styles.mapperHeader}>
+              <div>
+                <p className={styles.mapperTitle}>Legacy fields detected</p>
+                <p className={styles.mapperSubtitle}>Choose how old keys should map to your current schema.</p>
+              </div>
+              <button onClick={() => setShowMapper(prev => !prev)}>
+                {showMapper ? 'Hide Mapper' : 'Map Legacy Fields'}
+              </button>
+            </div>
+
+            {showMapper && (
+              <div className={styles.mapperBody}>
+                {legacyKeyStats.map(item => (
+                  <div key={item.key} className={styles.mapperRow}>
+                    <div className={styles.mapperLegacy}>
+                      <span className={styles.mapperKey}>{item.key}</span>
+                      <span className={styles.mapperCount}>{item.count} entr{item.count === 1 ? 'y' : 'ies'}</span>
+                    </div>
+                    <select
+                      value={mapping[item.key] || ''}
+                      onChange={(e) => handleMappingChange(item.key, e.target.value)}
+                    >
+                      <option value="">Do not map</option>
+                      {collection.fields.map(field => (
+                        <option key={field.key || field.name} value={field.key || field.name}>
+                          {field.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+
+                {mapperError && <p className={styles.mapperError}>{mapperError}</p>}
+                {mapperMessage && <p className={styles.mapperMessage}>{mapperMessage}</p>}
+
+                <div className={styles.mapperActions}>
+                  <button onClick={() => setShowMapper(false)}>Close</button>
+                  <button className="primary" onClick={applyLegacyMappings} disabled={promoting}>
+                    {promoting ? 'Applying...' : 'Apply Mapping'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {entries.length === 0 ? (
           <div className={styles.emptyState}>
@@ -162,22 +311,43 @@ export default function CollectionPage({ session }) {
 
                   {isExpanded && (
                     <div className={styles.entryBody}>
-                      {collection.fields.map(field => {
-                        const value = getFieldValue(entry.data, field)
-                        if (!value && value !== 0) return null
-                        return (
-                          <div key={field.key || field.name} className={styles.fieldDisplay}>
-                            <span className={styles.fieldLabel}>{field.name}</span>
-                            {field.type === 'stars' ? (
-                              <StarDisplay value={parseInt(value)} />
-                            ) : field.type === 'textarea' ? (
-                              <p className={styles.fieldText}>{value}</p>
-                            ) : (
-                              <span className={styles.fieldValue}>{value}</span>
-                            )}
-                          </div>
-                        )
-                      })}
+                      {(() => {
+                        const matchedKeys = new Set()
+
+                        const mappedFields = collection.fields.map(field => {
+                          const match = getFieldMatch(entry.data, field)
+                          const value = match?.value
+                          if (match?.key) matchedKeys.add(match.key)
+                          if (!value && value !== 0) return null
+
+                          return (
+                            <div key={field.key || field.name} className={styles.fieldDisplay}>
+                              <span className={styles.fieldLabel}>{field.name}</span>
+                              {field.type === 'stars' ? (
+                                <StarDisplay value={parseInt(value)} />
+                              ) : field.type === 'textarea' ? (
+                                <p className={styles.fieldText}>{value}</p>
+                              ) : (
+                                <span className={styles.fieldValue}>{value}</span>
+                              )}
+                            </div>
+                          )
+                        })
+
+                        const legacyFields = Object.entries(entry.data || {}).map(([key, value]) => {
+                          if (matchedKeys.has(key)) return null
+                          if (!value && value !== 0) return null
+
+                          return (
+                            <div key={`legacy-${entry.id}-${key}`} className={styles.fieldDisplay}>
+                              <span className={styles.fieldLabel}>{key} (legacy)</span>
+                              <span className={styles.fieldValue}>{String(value)}</span>
+                            </div>
+                          )
+                        })
+
+                        return [...mappedFields, ...legacyFields]
+                      })()}
                       {entry.notes && (
                         <div className={styles.fieldDisplay}>
                           <span className={styles.fieldLabel}>Notes</span>

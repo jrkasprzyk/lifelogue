@@ -53,19 +53,26 @@ export function getFieldCandidates(field) {
     .filter(Boolean)
 }
 
-export function getFieldValue(data, field) {
+export function getFieldMatch(data, field) {
   const row = data && typeof data === 'object' ? data : {}
   const candidates = getFieldCandidates(field)
 
   for (const candidate of candidates) {
-    if (hasOwn(row, candidate)) return row[candidate]
+    if (hasOwn(row, candidate)) return { key: candidate, value: row[candidate] }
   }
 
   const expected = toFieldKey(field?.name || field?.key || '')
-  if (!expected) return undefined
+  if (!expected) return null
 
   const canonicalMatch = Object.keys(row).find(key => toFieldKey(key) === expected)
-  if (canonicalMatch) return row[canonicalMatch]
+  if (canonicalMatch) return { key: canonicalMatch, value: row[canonicalMatch] }
+
+  return null
+}
+
+export function getFieldValue(data, field) {
+  const match = getFieldMatch(data, field)
+  if (match) return match.value
 
   return undefined
 }
