@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { getFieldValue } from '../lib/collectionFields'
 import Nav from '../components/Nav'
 import styles from './CollectionPage.module.css'
 
@@ -61,6 +62,8 @@ export default function CollectionPage({ session }) {
     )
   }
 
+  const starField = (collection.fields || []).find(f => f.type === 'stars')
+
   return (
     <div className={styles.page}>
       <Nav session={session} />
@@ -114,8 +117,9 @@ export default function CollectionPage({ session }) {
                           month: 'short', day: 'numeric', year: 'numeric'
                         })}
                       </span>
-                      {entry.data?.['Race Rating'] && <StarDisplay value={parseInt(entry.data['Race Rating'])} />}
-                      {entry.data?.['Rating'] && <StarDisplay value={parseInt(entry.data['Rating'])} />}
+                      {starField && Number(getFieldValue(entry.data, starField)) > 0 && (
+                        <StarDisplay value={parseInt(getFieldValue(entry.data, starField), 10)} />
+                      )}
                     </div>
                     <div className={styles.entryTitleRow}>
                       <h2 className={styles.entryTitle}>{entry.title}</h2>
@@ -134,10 +138,10 @@ export default function CollectionPage({ session }) {
                   {isExpanded && (
                     <div className={styles.entryBody}>
                       {collection.fields.map(field => {
-                        const value = entry.data?.[field.name]
+                        const value = getFieldValue(entry.data, field)
                         if (!value && value !== 0) return null
                         return (
-                          <div key={field.name} className={styles.fieldDisplay}>
+                          <div key={field.key || field.name} className={styles.fieldDisplay}>
                             <span className={styles.fieldLabel}>{field.name}</span>
                             {field.type === 'stars' ? (
                               <StarDisplay value={parseInt(value)} />

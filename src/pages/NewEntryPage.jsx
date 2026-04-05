@@ -57,8 +57,9 @@ export default function NewEntryPage({ session }) {
       setCollection(data)
       // Initialize all fields to empty strings (stars to 0)
       const initial = {}
-      data.fields.forEach(f => {
-        initial[f.name] = f.type === 'stars' ? 0 : ''
+      ;(data.fields || []).forEach(f => {
+        const fieldKey = f.key || f.name
+        initial[fieldKey] = f.type === 'stars' ? 0 : ''
       })
       setFieldValues(initial)
     }
@@ -143,17 +144,20 @@ export default function NewEntryPage({ session }) {
           {collection.fields.length > 0 && <hr />}
 
           {/* Dynamic fields */}
-          {collection.fields.map(field => (
-            <div key={field.name} className="field">
+          {collection.fields.map(field => {
+            const fieldKey = field.key || field.name
+            return (
+            <div key={fieldKey} className="field">
               <label>{field.name}</label>
               <FieldInput
                 field={field}
-                value={fieldValues[field.name] ?? (field.type === 'stars' ? 0 : '')}
-                onChange={val => setField(field.name, val)}
+                value={fieldValues[fieldKey] ?? (field.type === 'stars' ? 0 : '')}
+                onChange={val => setField(fieldKey, val)}
                 styles={styles}
               />
             </div>
-          ))}
+            )
+          })}
 
           {error && <p className={styles.error}>{error}</p>}
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { normalizeField } from '../lib/collectionFields'
 import Nav from '../components/Nav'
 import styles from './NewCollectionPage.module.css'
 
@@ -118,15 +119,24 @@ export default function NewCollectionPage({ session }) {
   const handleSave = async () => {
     if (!name.trim()) return setError('Give your collection a name.')
     if (fields.some(f => !f.name.trim())) return setError('All fields need a name.')
+
+    const normalizedNames = fields.map(f => f.name.trim().toLowerCase())
+    if (new Set(normalizedNames).size !== normalizedNames.length) {
+      return setError('Field names must be unique.')
+    }
+
     setSaving(true)
     setError(null)
+
+    const usedKeys = new Set()
+    const normalizedFields = fields.map(({ id: _localId, ...f }) => normalizeField(f, usedKeys))
 
     const { data, error: err } = await supabase.from('collections').insert({
       user_id: session.user.id,
       name: name.trim(),
       description: description.trim(),
       emoji,
-      fields: fields.map(({ id, ...f }) => f), // strip local id before saving
+      fields: normalizedFields,
     }).select().single()
 
     if (err) {

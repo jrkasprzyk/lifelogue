@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { getFieldValue, normalizeField } from '../lib/collectionFields'
 import Nav from '../components/Nav'
 import styles from './NewCollectionPage.module.css'
 
@@ -47,12 +48,16 @@ export default function EditCollectionPage({ session }) {
     setName(data.name || '')
     setDescription(data.description || '')
     setEmoji(data.emoji || '📓')
-    setFields((data.fields || []).map((f, idx) => ({ ...f, id: Date.now() + idx })))
+    setFields((data.fields || []).map((f, idx) => ({
+      ...f,
+      id: Date.now() + idx,
+      originalName: f.name || '',
+    })))
     setLoading(false)
   }
 
   const addField = () => {
-    setFields(prev => [...prev, { id: Date.now(), name: '', type: 'text' }])
+    setFields(prev => [...prev, { id: Date.now(), name: '', type: 'text', aliases: [] }])
   }
 
   const updateField = (fieldId, key, value) => {
@@ -87,16 +92,30 @@ export default function EditCollectionPage({ session }) {
     setSaving(true)
     setError(null)
 
+    const usedKeys = new Set()
+    const normalizedFields = fields.map((field) => {
+      const base = normalizeField(field, usedKeys)
+      const nextName = base.name
+      const prevName = String(field.originalName || '').trim()
+      const aliases = [...base.aliases]
+
+      if (prevName && prevName !== nextName && !aliases.includes(prevName)) {
+        aliases.push(prevName)
+      }
+
+      return {
+        ...base,
+        aliases,
+      }
+    })
+
     const { error: updateError } = await supabase
       .from('collections')
       .update({
         name: name.trim(),
         description: description.trim(),
         emoji,
-        fields: fields.map(({ id: _localId, ...f }) => ({
-          name: f.name.trim(),
-          type: f.type,
-        })),
+        fields: normalizedFields,
       })
       .eq('id', id)
       .eq('user_id', session.user.id)
@@ -105,6 +124,49 @@ export default function EditCollectionPage({ session }) {
       setError(updateError.message)
       setSaving(false)
       return
+    }
+
+    const { data: entries, error: entriesError } = await supabase
+      .from('entries')
+      .select('id, data')
+      .eq('collection_id', id)
+
+    if (entriesError) {
+      setError(entriesError.message)
+      setSaving(false)
+      return
+    }
+
+    const pendingUpdates = []
+
+    for (const entry of entries || []) {
+      const data = entry.data && typeof entry.data === 'object' ? { ...entry.data } : {}
+      let changed = false
+
+      for (const field of normalizedFields) {
+        if (Object.prototype.hasOwnProperty.call(data, field.key)) continue
+
+        const resolvedValue = getFieldValue(data, field)
+        if (resolvedValue !== undefined) {
+          data[field.key] = resolvedValue
+          changed = true
+        }
+      }
+
+      if (changed) pendingUpdates.push({ id: entry.id, data })
+    }
+
+    for (const update of pendingUpdates) {
+      const { error: entryUpdateError } = await supabase
+        .from('entries')
+        .update({ data: update.data })
+        .eq('id', update.id)
+
+      if (entryUpdateError) {
+        setError(entryUpdateError.message)
+        setSaving(false)
+        return
+      }
     }
 
     navigate(`/collections/${id}`)
@@ -165,7 +227,7 @@ export default function EditCollectionPage({ session }) {
           </div>
 
           <p className={styles.fieldsHint}>
-            Changing field names or types affects how future entries are saved and displayed.
+            Renames keep old values by migrating entry data to stable field keys.
           </p>
 
           {fields.length === 0 && (
